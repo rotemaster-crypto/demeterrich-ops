@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "firebase-hosting-emulator",
+      "runtimeExecutable": "C:\\Users\\tg45213\\AppData\\Local\\node\\firebase.cmd",
+      "runtimeArgs": ["emulators:start", "--only", "hosting"],
+      "port": 5000
+    }
+  ]
+}

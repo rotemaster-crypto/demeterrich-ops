@@ -5,10 +5,11 @@
 //           > คัดลอกอ็อบเจกต์ firebaseConfig มาวางแทนด้านล่างนี้ทั้งหมด
 // ==========================================================================
 export const firebaseConfig = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyDKcKv9Ic1GSgZTO6Pa3SFV1oO8Nd23vwA",
+  authDomain: "demeterrich-ops.firebaseapp.com",
+  projectId: "demeterrich-ops",
+  storageBucket: "demeterrich-ops.firebasestorage.app",
+  messagingSenderId: "993528060744",
+  appId: "1:993528060744:web:6d736d8b306c16c6c3317d",
+  measurementId: "G-B6N44PQG7Z"
 };
