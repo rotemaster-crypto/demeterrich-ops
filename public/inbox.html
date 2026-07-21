@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>กล่องข้อความ — DemeterRich Ops</title>
+<link rel="stylesheet" href="css/shared.css" />
+<style>
+  .inbox-shell { display: flex; height: calc(100vh - 40px); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .conv-list { width: 300px; flex-shrink: 0; border-right: 1px solid var(--line); overflow-y: auto; }
+  .conv-item { padding: 14px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .conv-item:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .conv-item.active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .conv-item .name { font-weight: 700; font-size: 13.5px; display: flex; justify-content: space-between; gap: 6px; }
+  .conv-item .preview { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .thread-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); font-size: 13.5px; }
+  .thread-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 65%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+  .bubble--in { align-self: flex-start; background: var(--line); color: var(--ink); border-bottom-left-radius: 3px; }
+  .bubble--out { align-self: flex-end; background: var(--accent); color: var(--accent-on); border-bottom-right-radius: 3px; }
+  .bubble .meta { font-size: 10.5px; opacity: 0.65; margin-top: 4px; }
+  .suggestions { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; }
+  .suggestion-chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 14px; font-size: 12.5px; cursor: pointer; }
+  .suggestion-chip:hover { border-color: var(--accent); }
+  .suggestion-chip.escalate { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+  .composer { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; align-items: flex-end; }
+  .composer textarea { flex: 1; min-height: 56px; }
+  .escalate-banner { background: var(--danger-bg); color: var(--danger); padding: 10px 20px; font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">DemeterRich Ops<small>Internal</small></div>
+    <a href="orders.html">📦 ออเดอร์ & CPA</a>
+    <a href="inbox.html" class="active">📨 กล่องข้อความ</a>
+    <a href="content.html">🗓 ปฏิทินคอนเทนต์</a>
+    <a href="chat-reference.html">💬 คลังสคริปต์แชท</a>
+    <a href="compliance-check.html">🛡 เช็กคำต้องห้าม</a>
+    <a href="salepage-settings.html">🎨 ตกแต่ง Sale Page</a>
+    <div class="spacer"></div>
+    <div class="user" id="current-user-email">—</div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </nav>
+
+  <main class="main" style="padding:20px 24px;">
+    <div class="page-head" style="margin-bottom:14px;">
+      <h1>กล่องข้อความ</h1>
+      <p>ข้อความจาก Messenger เข้ามาที่นี่ — ระบบแนะนำคำตอบให้ แต่ทุกข้อความต้องกดส่งเองเสมอ (ไม่มีการตอบอัตโนมัติ)</p>
+    </div>
+    <div id="error" class="error-box" hidden></div>
+
+    <div class="inbox-shell">
+      <div class="conv-list" id="conv-list">
+        <div class="empty-state">กำลังโหลด...</div>
+      </div>
+      <div class="thread" id="thread">
+        <div class="thread-empty">เลือกบทสนทนาทางซ้ายเพื่อเริ่มตอบ</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import {
+    db, auth, requireAuth, wireLogoutButton, explainFirestoreError,
+    collection, doc, updateDoc, query, orderBy,
+  } from "./js/app.js";
+  import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
+  import { chatScripts } from "./data/chat-scripts.js";
+
+  const functions = getFunctions(auth.app, "asia-southeast1");
+  const sendReplyFn = httpsCallable(functions, "sendReply");
+
+  let activePsid = null;
+  let unsubMessages = null;
+
+  function matchSuggestions(latestText) {
+    const t = (latestText || "").toLowerCase();
+    const scored = chatScripts
+      .map((s) => ({ s, score: t.includes(s.trigger.toLowerCase().slice(0, 6)) ? 2 : (s.trigger.split(/[\s/()]+/).some((w) => w.length > 2 && t.includes(w.toLowerCase())) ? 1 : 0) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((x) => x.s);
+    return scored;
+  }
+
+  function renderConvList(convs) {
+    const list = document.getElementById("conv-list");
+    if (!convs.length) {
+      list.innerHTML = `<div class="empty-state">ยังไม่มีข้อความเข้ามา</div>`;
+      return;
+    }
+    list.innerHTML = convs
+      .map((c) => {
+        const statusPill = c.status === "needs_reply" ? '<span class="pill pill--warn">ใหม่</span>' : '<span class="pill pill--ok">ตอบแล้ว</span>';
+        return `<div class="conv-item ${c.id === activePsid ? "active" : ""}" data-psid="${c.id}">
+          <div class="name">${c.customerName || "ลูกค้า #" + c.id.slice(-6)} ${statusPill}</div>
+          <div class="preview">${(c.lastMessageText || "").slice(0, 60)}</div>
+        </div>`;
+      })
+      .join("");
+    list.querySelectorAll(".conv-item").forEach((el) => {
+      el.addEventListener("click", () => openConversation(el.dataset.psid, convs));
+    });
+  }
+
+  function openConversation(psid, convs) {
+    activePsid = psid;
+    renderConvList(convs);
+    if (unsubMessages) unsubMessages();
+
+    const thread = document.getElementById("thread");
+    thread.innerHTML = `
+      <div class="thread-messages" id="thread-messages"></div>
+      <div class="suggestions" id="suggestions"></div>
+      <div class="composer">
+        <textarea id="composer-text" placeholder="พิมพ์คำตอบ หรือเลือกจากสคริปต์แนะนำด้านบน..."></textarea>
+        <button class="btn btn--primary" id="send-btn">ส่ง</button>
+      </div>
+    `;
+
+    const q = query(collection(db, "conversations", psid, "messages"), orderBy("createdAt", "asc"));
+    unsubMessages = onSnapshot(q, (snap) => {
+      const messages = snap.docs.map((d) => d.data());
+      const box = document.getElementById("thread-messages");
+      if (box) {
+        box.innerHTML = messages
+          .map((m) => `<div class="bubble bubble--${m.direction}">${escapeHtml(m.text)}</div>`)
+          .join("");
+        box.scrollTop = box.scrollHeight;
+      }
+      const latestIncoming = [...messages].reverse().find((m) => m.direction === "in");
+      renderSuggestions(latestIncoming?.text);
+    });
+
+    // mark as read (เปลี่ยนสถานะระดับบทสนทนา — ไม่ใช่การส่งข้อความ)
+    updateDoc(doc(db, "conversations", psid), { status: "seen" }).catch(() => {});
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function renderSuggestions(latestText) {
+    const box = document.getElementById("suggestions");
+    if (!box) return;
+    const matches = matchSuggestions(latestText);
+    if (!matches.length) {
+      box.innerHTML = `<span class="stat-sub">ไม่พบสคริปต์ที่ตรงพอดี — พิมพ์คำตอบเองด้านล่างได้เลย</span>`;
+      return;
+    }
+    box.innerHTML = matches
+      .map(
+        (s, i) => `<div class="suggestion-chip ${s.escalate ? "escalate" : ""}" data-i="${i}">
+          ${s.escalate ? "⚠️ " : ""}${s.trigger}
+        </div>`
+      )
+      .join("");
+    box.querySelectorAll(".suggestion-chip").forEach((chip, idx) => {
+      chip.addEventListener("click", () => {
+        const s = matches[idx];
+        if (s.escalate) {
+          alert("คำถามนี้ต้องส่งต่อ Roger ก่อนตอบ — ห้ามใช้สคริปต์นี้ส่งเองนะครับ (ระบบไม่กรอกให้อัตโนมัติ)");
+          return;
+        }
+        document.getElementById("composer-text").value = s.script;
+      });
+    });
+  }
+
+  document.addEventListener("click", async (e) => {
+    if (e.target?.id !== "send-btn") return;
+    const textEl = document.getElementById("composer-text");
+    const text = textEl.value.trim();
+    if (!text || !activePsid) return;
+    e.target.disabled = true;
+    try {
+      await sendReplyFn({ psid: activePsid, text });
+      textEl.value = "";
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    } finally {
+      e.target.disabled = false;
+    }
+  });
+
+  wireLogoutButton();
+  requireAuth(() => {
+    const q = query(collection(db, "conversations"), orderBy("lastMessageAt", "desc"));
+    onSnapshot(
+      q,
+      (snap) => {
+        const convs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        renderConvList(convs);
+      },
+      (err) => explainFirestoreError(err, "error")
+    );
+  });
+</script>
+</body>
+</html>

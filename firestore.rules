@@ -48,5 +48,19 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isTeamMember();
     }
+
+    // บทสนทนา Messenger — Cloud Functions (Admin SDK) เขียนข้อความจริงเข้ามา ไม่ผ่าน rules นี้เลย
+    // ฝั่งทีมอ่านได้เต็มที่ + แก้ field สถานะระดับบทสนทนาได้ (เช่น mark as read) แต่ห้ามยิงข้อความตรงจาก client
+    // การส่งข้อความจริงต้องผ่าน Cloud Function "sendReply" เท่านั้น เพื่อกันไม่ให้ข้อมูลใน Firestore กับสิ่งที่ลูกค้าได้รับจริงไม่ตรงกัน
+    match /conversations/{psid} {
+      allow read: if isTeamMember();
+      allow update: if isTeamMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]);
+      allow create, delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isTeamMember();
+        allow write: if false;
+      }
+    }
   }
 }

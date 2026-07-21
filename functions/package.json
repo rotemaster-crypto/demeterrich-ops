@@ -1,0 +1,14 @@
+{
+  "name": "demeterrich-ops-functions",
+  "description": "Cloud Functions: Facebook Messenger webhook receiver + admin-approved send",
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "private": true
+}

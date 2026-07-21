@@ -1,14 +1,14 @@
 rules_version = '2';
 
 // รูปภาพสำหรับ sale page (เช่น header image) — อ่านได้สาธารณะ (ต้องแสดงบนเว็บลูกค้า)
-// อัปโหลด/ลบได้เฉพาะทีมที่มีอีเมลอยู่ใน Firestore teamMembers เท่านั้น
+// อัปโหลด/ลบได้เฉพาะผู้ที่ login แล้วเท่านั้น — ระบบนี้ไม่มีสมัครสมาชิกเอง (สร้างบัญชีได้ผ่าน Firebase Console
+// โดยแอดมินเท่านั้น) ดังนั้น "login แล้ว" กับ "เป็นทีม" คือเงื่อนไขเดียวกันในทางปฏิบัติ — เลี่ยงใช้ cross-service
+// firestore.exists() เพราะพบว่าไม่ทำงานตามที่คาดตอนทดสอบจริง (เกิด storage/unauthorized แม้เป็นทีมจริง)
 service firebase.storage {
   match /b/{bucket}/o {
 
     function isTeamMember() {
-      return request.auth != null &&
-        request.auth.token.email != null &&
-        firestore.exists(/databases/(default)/documents/teamMembers/$(request.auth.token.email));
+      return request.auth != null && request.auth.token.email != null;
     }
 
     match /salepage/{allPaths=**} {

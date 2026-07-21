@@ -3,7 +3,13 @@
     {
       "target": "ops",
       "public": "public",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "/webhook/messenger",
+          "function": { "functionId": "messengerWebhook", "region": "asia-southeast1" }
+        }
+      ]
     },
     {
       "target": "salepage",
@@ -17,5 +23,12 @@
   },
   "storage": {
     "rules": "storage.rules"
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
+    }
+  ]
 }

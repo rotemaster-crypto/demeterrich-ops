@@ -12,10 +12,44 @@
 |---|---|---|
 | `ops` (target: `demeterrich-ops`) | https://demeterrich-ops.web.app | ทีมเท่านั้น (login) — เครื่องมือใน README นี้ทั้งหมด |
 | `salepage` (target: `maximus-salepage`) | https://maximus-salepage.web.app | สาธารณะ — หน้าขาย MAXIMUS ไม่มี login |
+| Cloudflare Worker | https://maximus-messenger-webhook.demeterrich.workers.dev | สาธารณะ — Facebook เรียกเข้ามาเท่านั้น (ไม่มีหน้าเว็บให้คนดู) |
 
 Sale page อยู่ในโฟลเดอร์ `salepage-public/` แยกจาก `public/` (ops tool) โดยเจตนา เพราะเป็นคนละกลุ่มผู้ใช้ (ลูกค้า vs ทีม) — deploy แยกกันได้ด้วย `firebase deploy --only hosting:salepage` หรือ `--only hosting:ops`
 
 **อัปเดต sale page:** แก้ไฟล์ต้นทางที่ `project maximus/salepage/index.html` ก่อน แล้วค่อย copy มาที่ `salepage-public/index.html` ในนี้ (ยังไม่ได้เชื่อมอัตโนมัติ — สองที่นี้อาจไม่ตรงกันถ้าลืม sync)
+
+---
+
+## Facebook Messenger — สถาปัตยกรรม (semi-auto with one-tap approval)
+
+```
+Facebook Messenger → Cloudflare Worker (รับข้อความ, สาธารณะ) → Firestore
+                                                                    ↓
+                                                          inbox.html (ทีมดูและกดส่ง)
+                                                                    ↓
+                                          Cloud Function "sendReply" (ต้อง login + กดปุ่มเท่านั้น) → Facebook Send API
+```
+
+**ทำไมรับข้อความผ่าน Cloudflare Worker ไม่ใช่ Cloud Functions โดยตรง:** ลองแล้วพบว่า Google Cloud project นี้มีการบล็อกการเข้าถึงแบบสาธารณะ (public/unauthenticated) ที่ระดับสูงกว่า project settings เอง (คาดว่าเป็น security perimeter ระดับองค์กร) ทำให้ Cloud Run/Functions เรียกจากภายนอกโดยไม่ auth ไม่ได้เลยแม้ตั้งค่า public access ถูกต้องแล้ว — Cloudflare Workers ไม่มีข้อจำกัดนี้ จึงใช้เป็นตัวรับแทน แล้วเขียนต่อเข้า Firestore โดยตรงผ่าน REST API (ยืนยันตัวตนด้วย Google Service Account เฉพาะที่สร้างไว้ให้ `messenger-webhook-writer@demeterrich-ops.iam.gserviceaccount.com` สิทธิ์แค่ `roles/datastore.user` เท่านั้น)
+
+**หลักการสำคัญ:** ไม่มีจุดไหนในระบบที่ส่งข้อความหาลูกค้าอัตโนมัติเลย — Worker แค่ "รับเข้า" ส่วน "ส่งออก" ต้องผ่าน `sendReply` ที่ต้อง login และกดปุ่มใน `inbox.html` เท่านั้นเสมอ (semi-auto with one-tap approval ตามที่ตกลงกันไว้)
+
+### ไฟล์ที่เกี่ยวข้อง
+- `cf-worker/worker.js` — Cloudflare Worker (รับ webhook)
+- `functions/index.js` — Cloud Function `sendReply` (ส่งข้อความ, auth-gated)
+- `public/inbox.html` — หน้าดูบทสนทนา + สคริปต์แนะนำ + ปุ่มส่ง
+
+### Meta App Setup Checklist (ต้องทำเองทั้งหมด — ผูกกับบัญชี Facebook ของคุณ)
+
+- [ ] สร้างเพจ Facebook สำหรับ MAXIMUS (Phase 4 — ยังไม่ได้เริ่ม ณ ตอนเขียนเอกสารนี้)
+- [ ] ไปที่ [developers.facebook.com](https://developers.facebook.com) → My Apps → Create App → เลือกประเภท "Business"
+- [ ] เพิ่ม Product "Messenger" เข้า App
+- [ ] ในหน้า Messenger Settings → Access Tokens → เลือกเพจ MAXIMUS → Generate Token → คัดลอก **Page Access Token**
+- [ ] ตั้งค่า Webhook: Callback URL = `https://maximus-messenger-webhook.demeterrich.workers.dev/` (ของจริงที่ deploy ไว้แล้ว), Verify Token = ค่าเดียวกับที่ตั้งไว้ในระบบ (ขอจาก Claude ถ้าจำไม่ได้ — เก็บเป็น Cloudflare secret ไม่โชว์ในโค้ด)
+- [ ] เลือก Subscribe to: `messages`
+- [ ] เอา Page Access Token ที่ได้ ไปอัปเดตใน Firebase Functions secret: `firebase functions:secrets:set FB_PAGE_ACCESS_TOKEN` (แล้ว redeploy `sendReply`)
+
+พอครบทุกข้อ ทดสอบได้จริงโดยส่งข้อความไปที่เพจ MAXIMUS แล้วเช็กที่ `inbox.html`
 
 ---
 
