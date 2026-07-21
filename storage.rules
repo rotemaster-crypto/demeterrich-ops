@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// รูปภาพสำหรับ sale page (เช่น header image) — อ่านได้สาธารณะ (ต้องแสดงบนเว็บลูกค้า)
+// อัปโหลด/ลบได้เฉพาะทีมที่มีอีเมลอยู่ใน Firestore teamMembers เท่านั้น
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isTeamMember() {
+      return request.auth != null &&
+        request.auth.token.email != null &&
+        firestore.exists(/databases/(default)/documents/teamMembers/$(request.auth.token.email));
+    }
+
+    match /salepage/{allPaths=**} {
+      allow read: if true;
+      allow write: if isTeamMember() && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

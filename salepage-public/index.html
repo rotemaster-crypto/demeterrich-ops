@@ -933,5 +933,67 @@
   <div style="margin-top:6px;">© 2026 DemeterRich Co., Ltd. — สงวนลิขสิทธิ์</div>
 </footer>
 
+<script type="module">
+  // โหลดค่าตกแต่ง (สี/ฟอนต์/รูป header/ข้อความ) จาก Control Panel — ตั้งค่าที่ demeterrich-ops/public/salepage-settings.html
+  // ถ้ายังไม่เคยตั้งค่า หรือโหลดไม่สำเร็จ หน้านี้จะใช้ดีไซน์เริ่มต้นในไฟล์นี้ต่อไปตามปกติ ไม่กระทบการใช้งาน
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDKcKv9Ic1GSgZTO6Pa3SFV1oO8Nd23vwA",
+    authDomain: "demeterrich-ops.firebaseapp.com",
+    projectId: "demeterrich-ops",
+    storageBucket: "demeterrich-ops.firebasestorage.app",
+    messagingSenderId: "993528060744",
+    appId: "1:993528060744:web:6d736d8b306c16c6c3317d",
+  };
+
+  function loadGoogleFont(family) {
+    if (!family) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=" + encodeURIComponent(family) + ":wght@400;600;700&display=swap";
+    document.head.appendChild(link);
+  }
+
+  async function applySiteSettings() {
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const snap = await getDoc(doc(db, "siteSettings", "salepage"));
+      if (!snap.exists()) return;
+      const s = snap.data();
+      const root = document.documentElement;
+
+      if (s.colors) {
+        if (s.colors.bg) { root.style.setProperty("--forest-deep", s.colors.bg); root.style.setProperty("--forest", s.colors.bg); }
+        if (s.colors.accent) { root.style.setProperty("--gold", s.colors.accent); root.style.setProperty("--gold-bright", s.colors.accent); }
+        if (s.colors.cream) { root.style.setProperty("--cream", s.colors.cream); root.style.setProperty("--cream-hi", s.colors.cream); }
+      }
+      if (s.fonts?.display && s.fonts.display !== "Cinzel") {
+        loadGoogleFont(s.fonts.display);
+        root.style.setProperty("--serif-latin", "'" + s.fonts.display + "', serif");
+      }
+      if (s.fonts?.thai && s.fonts.thai !== "Taviraj") {
+        loadGoogleFont(s.fonts.thai);
+        root.style.setProperty("--serif-thai", "'" + s.fonts.thai + "', 'Leelawadee UI', serif");
+      }
+      if (s.headerImageUrl) {
+        const hero = document.querySelector(".hero");
+        if (hero) {
+          hero.style.backgroundImage = "linear-gradient(rgba(18,32,26,0.55), rgba(18,32,26,0.75)), url('" + s.headerImageUrl + "')";
+          hero.style.backgroundSize = "cover";
+          hero.style.backgroundPosition = "center";
+        }
+      }
+      if (s.text?.eyebrow) { const el = document.querySelector(".hero__eyebrow"); if (el) el.textContent = s.text.eyebrow; }
+      if (s.text?.headline) { const el = document.querySelector(".hero__headline"); if (el) el.textContent = s.text.headline; }
+      if (s.text?.sub) { const el = document.querySelector(".hero__sub"); if (el) el.textContent = s.text.sub; }
+    } catch (e) {
+      console.warn("ไม่สามารถโหลดการตั้งค่าธีมได้ ใช้ค่าเริ่มต้นแทน", e);
+    }
+  }
+  applySiteSettings();
+</script>
 </body>
 </html>

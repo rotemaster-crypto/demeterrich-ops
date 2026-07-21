@@ -41,5 +41,12 @@ service cloud.firestore {
       allow read: if isTeamMember();
       allow write: if false;
     }
+
+    // ค่าตั้งค่าหน้า sale page (สี/ฟอนต์/รูป header) — sale page เป็นหน้าสาธารณะไม่มี login
+    // จึงต้องอ่านได้โดยไม่ต้อง auth แต่แก้ไขได้เฉพาะทีมเท่านั้น
+    match /siteSettings/{docId} {
+      allow read: if true;
+      allow write: if isTeamMember();
+    }
   }
 }

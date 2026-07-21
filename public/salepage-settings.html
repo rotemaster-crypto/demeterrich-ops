@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ตกแต่ง Sale Page — DemeterRich Ops</title>
+<link rel="stylesheet" href="css/shared.css" />
+<style>
+  .swatch-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .swatch-row input[type="color"] { width: 52px; height: 40px; padding: 2px; border-radius: 6px; cursor: pointer; }
+  .swatch-row .meta { flex: 1; }
+  .swatch-row .meta .name { font-weight: 700; font-size: 14px; }
+  .swatch-row .meta .hex { font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .upload-box {
+    border: 1.5px dashed var(--line); border-radius: 8px; padding: 24px; text-align: center;
+    color: var(--ink-soft); font-size: 13.5px; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .upload-box img { max-width: 100%; max-height: 160px; border-radius: 6px; margin-top: 10px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+  iframe#preview-frame { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 8px; }
+  .save-bar { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 14px 0; margin-top: 24px; display: flex; gap: 10px; align-items: center; }
+  .save-msg { font-size: 13px; color: var(--ok); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">DemeterRich Ops<small>Internal</small></div>
+    <a href="orders.html">📦 ออเดอร์ & CPA</a>
+    <a href="content.html">🗓 ปฏิทินคอนเทนต์</a>
+    <a href="chat-reference.html">💬 คลังสคริปต์แชท</a>
+    <a href="compliance-check.html">🛡 เช็กคำต้องห้าม</a>
+    <a href="salepage-settings.html" class="active">🎨 ตกแต่ง Sale Page</a>
+    <div class="spacer"></div>
+    <div class="user" id="current-user-email">—</div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <h1>ตกแต่ง Sale Page</h1>
+      <p>ปรับสี ฟอนต์ รูป header และข้อความหน้าแรก — บันทึกแล้วมีผลทันทีที่ <a href="https://maximus-salepage.web.app" target="_blank">maximus-salepage.web.app</a> (เหมาะสำหรับปรับตามเทศกาล)</p>
+    </div>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <div class="two-col">
+      <div>
+        <div class="card" style="margin-bottom:16px;">
+          <h3>สีโทนสี</h3>
+          <div class="swatch-row">
+            <input type="color" id="c-bg" value="#12201a" />
+            <div class="meta"><div class="name">พื้นเข้ม (Background หลัก)</div><div class="hex" id="c-bg-hex">#12201a</div></div>
+          </div>
+          <div class="swatch-row">
+            <input type="color" id="c-accent" value="#c9a24b" />
+            <div class="meta"><div class="name">สีเน้น (ปุ่ม / ไฮไลต์)</div><div class="hex" id="c-accent-hex">#c9a24b</div></div>
+          </div>
+          <div class="swatch-row">
+            <input type="color" id="c-cream" value="#f6f1e3" />
+            <div class="meta"><div class="name">พื้นอ่อน (การ์ด / พื้นหลังส่วนสว่าง)</div><div class="hex" id="c-cream-hex">#f6f1e3</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <h3>ฟอนต์</h3>
+          <div class="field">
+            <label>ฟอนต์หัวข้อ / แบรนด์ (ภาษาอังกฤษ)</label>
+            <select id="f-display">
+              <option value="Cinzel">Cinzel (ค่าเริ่มต้น)</option>
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Cormorant Garamond">Cormorant Garamond</option>
+              <option value="Marcellus">Marcellus</option>
+              <option value="Abril Fatface">Abril Fatface (หนา เทศกาล)</option>
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="__custom__">อื่นๆ (พิมพ์ชื่อฟอนต์ Google Fonts เอง)</option>
+            </select>
+            <input id="f-display-custom" placeholder="พิมพ์ชื่อฟอนต์จาก fonts.google.com" style="margin-top:8px;" hidden />
+          </div>
+          <div class="field">
+            <label>ฟอนต์หัวข้อภาษาไทย</label>
+            <select id="f-thai">
+              <option value="Taviraj">Taviraj (ค่าเริ่มต้น)</option>
+              <option value="Prompt">Prompt</option>
+              <option value="Mitr">Mitr</option>
+              <option value="Chonburi">Chonburi (เทศกาล)</option>
+              <option value="Kanit">Kanit</option>
+              <option value="Sarabun">Sarabun</option>
+              <option value="__custom__">อื่นๆ (พิมพ์ชื่อฟอนต์ Google Fonts เอง)</option>
+            </select>
+            <input id="f-thai-custom" placeholder="พิมพ์ชื่อฟอนต์จาก fonts.google.com" style="margin-top:8px;" hidden />
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <h3>รูปภาพ Header</h3>
+          <p class="stat-sub" style="margin-bottom:10px;">แสดงเป็นพื้นหลังส่วน Hero (ด้านบนสุดของหน้า) — ไม่บังคับ ถ้าไม่ใส่จะใช้ลายเส้นเดิม</p>
+          <div class="upload-box" id="upload-box">
+            <div id="upload-placeholder">📷 คลิกเพื่อเลือกรูป (ไม่เกิน 5MB)</div>
+            <img id="header-preview" style="display:none;" />
+          </div>
+          <input type="file" id="header-file" accept="image/*" hidden />
+          <button class="btn btn--ghost" id="remove-image-btn" style="margin-top:10px;" hidden>ลบรูป</button>
+        </div>
+
+        <div class="card">
+          <h3>ข้อความหน้าแรก (ไม่บังคับ)</h3>
+          <div class="field">
+            <label>Eyebrow (ข้อความเล็กเหนือโลโก้)</label>
+            <input id="t-eyebrow" placeholder="เพชรพญา · Since Samut Sakhon" />
+          </div>
+          <div class="field">
+            <label>Headline หลัก</label>
+            <input id="t-headline" placeholder="สูตรกรดอะมิโน 17 ชนิด บำรุงและฟื้นฟูไม้ด่างของคุณ" />
+          </div>
+          <div class="field">
+            <label>Subheadline</label>
+            <textarea id="t-sub" placeholder="ครบทั้งสเปรย์ทางใบและแกลลอนบำรุง..." style="min-height:70px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>ตัวอย่างสด</h3>
+          <p class="stat-sub" style="margin-bottom:10px;">แสดงหน้าเว็บจริงล่าสุดที่บันทึกไว้ — กด "รีเฟรชตัวอย่าง" หลังบันทึก</p>
+          <iframe id="preview-frame" src="https://maximus-salepage.web.app"></iframe>
+          <button class="btn btn--ghost" id="refresh-preview" style="margin-top:10px;">🔄 รีเฟรชตัวอย่าง</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="save-bar">
+      <button class="btn btn--primary" id="save-btn">บันทึกและเผยแพร่ทันที</button>
+      <button class="btn btn--danger" id="reset-btn">รีเซ็ตเป็นค่าเริ่มต้น</button>
+      <span class="save-msg" id="save-msg" hidden></span>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import {
+    db, auth, requireAuth, wireLogoutButton, explainFirestoreError,
+    doc, setDoc, getDoc, deleteDoc,
+  } from "./js/app.js";
+  import {
+    getStorage, ref, uploadBytes, getDownloadURL, deleteObject,
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
+
+  const storage = getStorage();
+  const SETTINGS_DOC = doc(db, "siteSettings", "salepage");
+  let uploadedImageUrl = null;
+  let uploadedImagePath = null;
+
+  function syncHexLabel(colorInputId, labelId) {
+    const input = document.getElementById(colorInputId);
+    const label = document.getElementById(labelId);
+    input.addEventListener("input", () => (label.textContent = input.value));
+  }
+  syncHexLabel("c-bg", "c-bg-hex");
+  syncHexLabel("c-accent", "c-accent-hex");
+  syncHexLabel("c-cream", "c-cream-hex");
+
+  function wireCustomFont(selectId, customId) {
+    const select = document.getElementById(selectId);
+    const custom = document.getElementById(customId);
+    select.addEventListener("change", () => {
+      custom.hidden = select.value !== "__custom__";
+    });
+  }
+  wireCustomFont("f-display", "f-display-custom");
+  wireCustomFont("f-thai", "f-thai-custom");
+
+  function getFontValue(selectId, customId) {
+    const select = document.getElementById(selectId);
+    if (select.value === "__custom__") return document.getElementById(customId).value.trim();
+    return select.value;
+  }
+  function setFontValue(selectId, customId, value) {
+    const select = document.getElementById(selectId);
+    const options = Array.from(select.options).map((o) => o.value);
+    if (options.includes(value)) {
+      select.value = value;
+    } else if (value) {
+      select.value = "__custom__";
+      document.getElementById(customId).hidden = false;
+      document.getElementById(customId).value = value;
+    }
+  }
+
+  // ---- Image upload ----
+  document.getElementById("upload-box").addEventListener("click", () => {
+    document.getElementById("header-file").click();
+  });
+  document.getElementById("header-file").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("ไฟล์ใหญ่เกิน 5MB");
+      return;
+    }
+    const path = `salepage/header-${Date.now()}-${file.name}`;
+    const storageRef = ref(storage, path);
+    try {
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      uploadedImageUrl = url;
+      uploadedImagePath = path;
+      showImagePreview(url);
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+  function showImagePreview(url) {
+    document.getElementById("upload-placeholder").style.display = "none";
+    const img = document.getElementById("header-preview");
+    img.src = url;
+    img.style.display = "block";
+    document.getElementById("remove-image-btn").hidden = false;
+  }
+  document.getElementById("remove-image-btn").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (uploadedImagePath) {
+      try { await deleteObject(ref(storage, uploadedImagePath)); } catch {}
+    }
+    uploadedImageUrl = null;
+    uploadedImagePath = null;
+    document.getElementById("header-preview").style.display = "none";
+    document.getElementById("upload-placeholder").style.display = "block";
+    document.getElementById("remove-image-btn").hidden = true;
+  });
+
+  // ---- Load existing settings ----
+  async function loadSettings() {
+    const snap = await getDoc(SETTINGS_DOC);
+    if (!snap.exists()) return;
+    const s = snap.data();
+    if (s.colors) {
+      if (s.colors.bg) { document.getElementById("c-bg").value = s.colors.bg; document.getElementById("c-bg-hex").textContent = s.colors.bg; }
+      if (s.colors.accent) { document.getElementById("c-accent").value = s.colors.accent; document.getElementById("c-accent-hex").textContent = s.colors.accent; }
+      if (s.colors.cream) { document.getElementById("c-cream").value = s.colors.cream; document.getElementById("c-cream-hex").textContent = s.colors.cream; }
+    }
+    if (s.fonts) {
+      if (s.fonts.display) setFontValue("f-display", "f-display-custom", s.fonts.display);
+      if (s.fonts.thai) setFontValue("f-thai", "f-thai-custom", s.fonts.thai);
+    }
+    if (s.headerImageUrl) {
+      uploadedImageUrl = s.headerImageUrl;
+      uploadedImagePath = s.headerImagePath || null;
+      showImagePreview(s.headerImageUrl);
+    }
+    if (s.text) {
+      document.getElementById("t-eyebrow").value = s.text.eyebrow || "";
+      document.getElementById("t-headline").value = s.text.headline || "";
+      document.getElementById("t-sub").value = s.text.sub || "";
+    }
+  }
+
+  // ---- Save ----
+  document.getElementById("save-btn").addEventListener("click", async () => {
+    const payload = {
+      colors: {
+        bg: document.getElementById("c-bg").value,
+        accent: document.getElementById("c-accent").value,
+        cream: document.getElementById("c-cream").value,
+      },
+      fonts: {
+        display: getFontValue("f-display", "f-display-custom") || "Cinzel",
+        thai: getFontValue("f-thai", "f-thai-custom") || "Taviraj",
+      },
+      headerImageUrl: uploadedImageUrl || null,
+      headerImagePath: uploadedImagePath || null,
+      text: {
+        eyebrow: document.getElementById("t-eyebrow").value.trim(),
+        headline: document.getElementById("t-headline").value.trim(),
+        sub: document.getElementById("t-sub").value.trim(),
+      },
+      updatedAt: new Date().toISOString(),
+      updatedBy: auth.currentUser?.email || "unknown",
+    };
+    try {
+      await setDoc(SETTINGS_DOC, payload);
+      const msg = document.getElementById("save-msg");
+      msg.textContent = "✓ บันทึกแล้ว มีผลทันทีที่หน้าเว็บจริง";
+      msg.hidden = false;
+      setTimeout(() => (msg.hidden = true), 4000);
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", async () => {
+    if (!confirm("รีเซ็ตค่าตกแต่งทั้งหมดกลับเป็นค่าเริ่มต้นของโค้ด? (ไม่ลบรูปที่อัปโหลดไว้ใน Storage)")) return;
+    try {
+      await deleteDoc(SETTINGS_DOC);
+      window.location.reload();
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+
+  document.getElementById("refresh-preview").addEventListener("click", () => {
+    const frame = document.getElementById("preview-frame");
+    frame.src = frame.src;
+  });
+
+  wireLogoutButton();
+  requireAuth(async () => {
+    try {
+      await loadSettings();
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+</script>
+</body>
+</html>
