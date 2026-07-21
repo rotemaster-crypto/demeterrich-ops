@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DemeterRich Ops</title>
+</head>
+<body>
+<script type="module">
+  import { auth } from "./js/app.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  onAuthStateChanged(auth, (user) => {
+    window.location.href = user ? "orders.html" : "login.html";
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>คลังสคริปต์แชท — DemeterRich Ops</title>
+<link rel="stylesheet" href="css/shared.css" />
+<style>
+  .script-card { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 10px; background: var(--surface); }
+  .script-card .cat { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+  .script-card .trigger { font-weight: 700; margin: 4px 0 10px; font-size: 15px; }
+  .script-card pre { white-space: pre-wrap; font-family: var(--sans); background: var(--bg); border-radius: 6px; padding: 12px 14px; font-size: 13.5px; margin: 0; }
+  .copy-btn { margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">DemeterRich Ops<small>Internal</small></div>
+    <a href="orders.html">📦 ออเดอร์ & CPA</a>
+    <a href="content.html">🗓 ปฏิทินคอนเทนต์</a>
+    <a href="chat-reference.html" class="active">💬 คลังสคริปต์แชท</a>
+    <a href="compliance-check.html">🛡 เช็กคำต้องห้าม</a>
+    <div class="spacer"></div>
+    <div class="user" id="current-user-email">—</div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <h1>คลังสคริปต์แชท</h1>
+      <p>ค้นหาคำถามลูกค้า → เจอสคริปต์ที่ต้องใช้ทันที (จาก sales/chat-playbook.md + objection-bank.md)</p>
+    </div>
+
+    <div class="field" style="max-width:420px; margin-bottom:20px;">
+      <input id="search" type="text" placeholder="พิมพ์คำถามลูกค้า เช่น แพง, สัตว์เลี้ยง, คืนเงิน..." />
+    </div>
+
+    <div id="results"></div>
+  </main>
+</div>
+
+<script type="module">
+  import { auth, requireAuth, wireLogoutButton } from "./js/app.js";
+  import { chatScripts } from "./data/chat-scripts.js";
+
+  function render(filter = "") {
+    const f = filter.trim().toLowerCase();
+    const items = chatScripts.filter(
+      (s) => !f || s.trigger.toLowerCase().includes(f) || s.category.toLowerCase().includes(f) || s.script.toLowerCase().includes(f)
+    );
+    const container = document.getElementById("results");
+    if (!items.length) {
+      container.innerHTML = `<div class="empty-state">ไม่พบสคริปต์ที่ตรงกับ "${filter}" — ถ้าเป็นคำถามใหม่ ให้ส่งต่อ Roger ก่อนตอบเอง</div>`;
+      return;
+    }
+    container.innerHTML = items
+      .map(
+        (s, i) => `<div class="script-card">
+          <div class="cat">${s.category}${s.escalate ? ' <span class="pill pill--danger">ห้ามตอบเอง</span>' : ""}</div>
+          <div class="trigger">${s.trigger}</div>
+          <pre id="script-${i}">${s.script}</pre>
+          <button class="btn btn--ghost copy-btn" data-target="script-${i}">คัดลอก</button>
+        </div>`
+      )
+      .join("");
+
+    container.querySelectorAll(".copy-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const text = document.getElementById(btn.dataset.target).textContent;
+        navigator.clipboard.writeText(text);
+        btn.textContent = "คัดลอกแล้ว ✓";
+        setTimeout(() => (btn.textContent = "คัดลอก"), 1500);
+      });
+    });
+  }
+
+  document.getElementById("search").addEventListener("input", (e) => render(e.target.value));
+
+  wireLogoutButton();
+  requireAuth(() => render());
+</script>
+</body>
+</html>

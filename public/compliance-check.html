@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เช็กคำต้องห้าม — DemeterRich Ops</title>
+<link rel="stylesheet" href="css/shared.css" />
+<style>
+  textarea#draft { min-height: 220px; font-size: 15px; resize: vertical; }
+  .finding { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 6px; margin-bottom: 8px; }
+  .finding--block { background: var(--danger-bg); color: var(--danger); }
+  .finding--warn { background: var(--warn-bg); color: var(--warn); }
+  .finding b { display: block; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">DemeterRich Ops<small>Internal</small></div>
+    <a href="orders.html">📦 ออเดอร์ & CPA</a>
+    <a href="content.html">🗓 ปฏิทินคอนเทนต์</a>
+    <a href="chat-reference.html">💬 คลังสคริปต์แชท</a>
+    <a href="compliance-check.html" class="active">🛡 เช็กคำต้องห้าม</a>
+    <div class="spacer"></div>
+    <div class="user" id="current-user-email">—</div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <h1>เช็กคำต้องห้ามก่อนโพสต์</h1>
+      <p>วางร่าง ad copy / โพสต์ / ข้อความแชท แล้วระบบเช็กอัตโนมัติตาม compliance/approved-claims.md — เช็กนี้เป็นตัวช่วยเบื้องต้น ไม่ทดแทนการตรวจของ Compliance Agent/Roger</p>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <label for="draft">ข้อความร่าง</label>
+      <textarea id="draft" placeholder="วางข้อความที่จะโพสต์ตรงนี้..."></textarea>
+    </div>
+
+    <div class="card">
+      <h3 id="result-head">ผลการตรวจ</h3>
+      <div id="findings"></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { requireAuth, wireLogoutButton } from "./js/app.js";
+  import { bannedTerms } from "./data/banned-terms.js";
+
+  function check() {
+    const text = document.getElementById("draft").value;
+    const findings = bannedTerms.filter((t) => t.pattern.test(text));
+    const container = document.getElementById("findings");
+    const head = document.getElementById("result-head");
+
+    if (!text.trim()) {
+      container.innerHTML = `<div class="empty-state">พิมพ์หรือวางข้อความด้านบนเพื่อเริ่มเช็ก</div>`;
+      head.textContent = "ผลการตรวจ";
+      return;
+    }
+    if (!findings.length) {
+      container.innerHTML = `<div class="finding" style="background:var(--ok-bg); color:var(--ok);"><b>ไม่พบคำต้องห้ามในรายการที่เช็กอัตโนมัติได้</b>ยังต้องให้คนตรวจอีกครั้งก่อนเผยแพร่จริงเสมอ (ระบบนี้เช็กได้แค่คำที่ตรงรูปแบบเท่านั้น)</div>`;
+      head.textContent = "ผลการตรวจ — ผ่านเบื้องต้น";
+      return;
+    }
+    const blockCount = findings.filter((f) => f.severity === "block").length;
+    head.textContent = `ผลการตรวจ — พบ ${findings.length} จุด (ห้ามใช้ ${blockCount} จุด)`;
+    container.innerHTML = findings
+      .map(
+        (f) => `<div class="finding finding--${f.severity}">
+          <div>
+            <b>${f.severity === "block" ? "🚫 ห้ามใช้: " : "⚠️ ระวัง: "}${f.label}</b>
+            ${f.reason}
+          </div>
+        </div>`
+      )
+      .join("");
+  }
+
+  document.getElementById("draft").addEventListener("input", check);
+
+  wireLogoutButton();
+  requireAuth(() => check());
+</script>
+</body>
+</html>

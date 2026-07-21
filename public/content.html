@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ปฏิทินคอนเทนต์ — DemeterRich Ops</title>
+<link rel="stylesheet" href="css/shared.css" />
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">DemeterRich Ops<small>Internal</small></div>
+    <a href="orders.html">📦 ออเดอร์ & CPA</a>
+    <a href="content.html" class="active">🗓 ปฏิทินคอนเทนต์</a>
+    <a href="chat-reference.html">💬 คลังสคริปต์แชท</a>
+    <a href="compliance-check.html">🛡 เช็กคำต้องห้าม</a>
+    <div class="spacer"></div>
+    <div class="user" id="current-user-email">—</div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <h1>ปฏิทินคอนเทนต์ 30 วัน</h1>
+      <p>ติ๊กเมื่อโพสต์แล้ว — ต้องครบ 12 โพสต์แรกก่อนเริ่มยิงแอด (ตามกติกา marketing/page-setup.md)</p>
+    </div>
+
+    <div id="error" class="error-box" hidden></div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="stat-label">ความคืบหน้าก่อนยิงแอด (Day 1-12)</div>
+      <div class="stat-value" id="gate-progress">—</div>
+      <div class="stat-sub" id="gate-status"></div>
+    </div>
+
+    <div class="card">
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th style="width:50px;">Day</th><th style="width:60px;">เสา</th><th>หัวข้อ</th><th style="width:90px;">บังคับ</th><th style="width:80px;">สถานะ</th></tr></thead>
+          <tbody id="cal-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { db, requireAuth, wireLogoutButton, explainFirestoreError, doc, setDoc, getDocs, collection } from "./js/app.js";
+  import { maximusCalendar } from "./data/content-calendar-maximus.js";
+
+  const PRODUCT_KEY = "maximus"; // ตอนมีสินค้าใหม่: เปลี่ยนเป็น dropdown เลือกสินค้า + ใช้ seed data ของสินค้านั้น
+
+  async function loadStatuses() {
+    const snap = await getDocs(collection(db, "contentCalendar"));
+    const statusMap = {};
+    snap.docs.forEach((d) => { statusMap[d.id] = d.data().posted; });
+    return statusMap;
+  }
+
+  function renderGate(statusMap) {
+    const requiredDays = maximusCalendar.filter((c) => c.required);
+    const doneCount = requiredDays.filter((c) => statusMap[`${PRODUCT_KEY}_${c.day}`]).length;
+    document.getElementById("gate-progress").textContent = `${doneCount} / ${requiredDays.length}`;
+    const el = document.getElementById("gate-status");
+    if (doneCount >= requiredDays.length) {
+      el.innerHTML = `<span class="pill pill--ok">ครบแล้ว — ยิงแอดได้ตามกติกา</span>`;
+    } else {
+      el.innerHTML = `<span class="pill pill--warn">เหลืออีก ${requiredDays.length - doneCount} โพสต์ก่อนยิงแอดได้</span>`;
+    }
+  }
+
+  async function render() {
+    const statusMap = await loadStatuses();
+    renderGate(statusMap);
+    const tbody = document.getElementById("cal-tbody");
+    tbody.innerHTML = maximusCalendar
+      .map((c) => {
+        const key = `${PRODUCT_KEY}_${c.day}`;
+        const posted = !!statusMap[key];
+        return `<tr>
+          <td>${c.day}</td>
+          <td>${c.pillar}</td>
+          <td>${c.topic}</td>
+          <td>${c.required ? '<span class="pill pill--warn">บังคับ</span>' : '<span class="pill pill--neutral">เสริม</span>'}</td>
+          <td><label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" class="post-check" data-key="${key}" ${posted ? "checked" : ""} style="width:auto;" />
+            ${posted ? "โพสต์แล้ว" : "ยังไม่โพสต์"}
+          </label></td>
+        </tr>`;
+      })
+      .join("");
+
+    document.querySelectorAll(".post-check").forEach((cb) => {
+      cb.addEventListener("change", async (e) => {
+        try {
+          await setDoc(doc(db, "contentCalendar", e.target.dataset.key), {
+            posted: e.target.checked,
+            product: PRODUCT_KEY,
+            updatedAt: new Date().toISOString(),
+          });
+          await render();
+        } catch (err) {
+          explainFirestoreError(err, "error");
+        }
+      });
+    });
+  }
+
+  wireLogoutButton();
+  requireAuth(async () => {
+    try {
+      await render();
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+</script>
+</body>
+</html>

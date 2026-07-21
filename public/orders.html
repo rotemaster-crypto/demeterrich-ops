@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ออเดอร์ & CPA — DemeterRich Ops</title>
+<link rel="stylesheet" href="css/shared.css" />
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">DemeterRich Ops<small>Internal</small></div>
+    <a href="orders.html" class="active">📦 ออเดอร์ & CPA</a>
+    <a href="content.html">🗓 ปฏิทินคอนเทนต์</a>
+    <a href="chat-reference.html">💬 คลังสคริปต์แชท</a>
+    <a href="compliance-check.html">🛡 เช็กคำต้องห้าม</a>
+    <div class="spacer"></div>
+    <div class="user" id="current-user-email">—</div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <h1>ออเดอร์ & CPA Tracker</h1>
+      <p>บันทึกออเดอร์และค่าแอด ระบบคำนวณ CPA จริงเทียบเพดานให้อัตโนมัติ</p>
+    </div>
+
+    <div id="error" class="error-box" hidden></div>
+    <div id="setup-box" class="card" hidden>
+      <strong>ยังไม่มีสินค้าในระบบ</strong>
+      <p class="stat-sub">กดปุ่มด้านล่างเพื่อตั้งค่าเริ่มต้น (สร้างสินค้า MAXIMUS + แพ็กเกจ 3 ชุดให้อัตโนมัติ ใช้ครั้งเดียว)</p>
+      <button class="btn btn--primary" id="seed-btn">ตั้งค่าเริ่มต้น (MAXIMUS)</button>
+    </div>
+
+    <!-- STATS -->
+    <div class="grid grid-4" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="stat-label">ออเดอร์เดือนนี้</div>
+        <div class="stat-value" id="stat-orders">—</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">ยอดขายเดือนนี้</div>
+        <div class="stat-value" id="stat-revenue">—</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">ค่าแอดเดือนนี้</div>
+        <div class="stat-value" id="stat-adspend">—</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">CPA จริง vs เพดาน</div>
+        <div class="stat-value" id="stat-cpa">—</div>
+        <div class="stat-sub" id="stat-cpa-note">เพดานอ้างอิงจาก analysis/unit-economics.md</div>
+      </div>
+    </div>
+
+    <!-- ADD ORDER -->
+    <div class="card" style="margin-bottom:20px;">
+      <h3>เพิ่มออเดอร์ใหม่</h3>
+      <form id="order-form">
+        <div class="field-row">
+          <div class="field">
+            <label>ชื่อลูกค้า</label>
+            <input id="f-name" required />
+          </div>
+          <div class="field">
+            <label>เบอร์โทร</label>
+            <input id="f-phone" />
+          </div>
+          <div class="field">
+            <label>แพ็กเกจ</label>
+            <select id="f-offer" required></select>
+          </div>
+          <div class="field">
+            <label>จำนวน</label>
+            <input id="f-qty" type="number" min="1" value="1" required />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>ช่องทางที่มา (UTM/มุมโฆษณา — ไม่บังคับ)</label>
+            <input id="f-angle" placeholder="เช่น A-คุ้มค่า, D-ความรู้, ออร์แกนิก" />
+          </div>
+          <div class="field">
+            <label>ที่อยู่จัดส่ง</label>
+            <input id="f-address" />
+          </div>
+        </div>
+        <button class="btn btn--primary" type="submit">บันทึกออเดอร์</button>
+      </form>
+    </div>
+
+    <!-- ORDERS TABLE -->
+    <div class="card" style="margin-bottom:20px;">
+      <h3>ออเดอร์ล่าสุด</h3>
+      <div class="table-scroll">
+        <table class="data" id="orders-table">
+          <thead>
+            <tr><th>วันที่</th><th>ลูกค้า</th><th>แพ็กเกจ</th><th>จำนวน</th><th>ยอด</th><th>ที่มา</th><th>สถานะ</th></tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+        <div id="orders-empty" class="empty-state" hidden>ยังไม่มีออเดอร์ — เพิ่มออเดอร์แรกด้านบนได้เลย</div>
+      </div>
+    </div>
+
+    <!-- AD SPEND LOG -->
+    <div class="card">
+      <h3>บันทึกค่าแอดรายวัน</h3>
+      <p class="stat-sub">ใช้คำนวณ CPA จริง — บันทึกทุกวันที่ยิงแอดเพื่อให้ตัวเลขแม่นยำ</p>
+      <form id="adspend-form" class="field-row" style="align-items:flex-end;">
+        <div class="field">
+          <label>วันที่</label>
+          <input id="as-date" type="date" required />
+        </div>
+        <div class="field">
+          <label>มุมโฆษณา (ไม่บังคับ)</label>
+          <input id="as-angle" placeholder="เช่น A-คุ้มค่า" />
+        </div>
+        <div class="field">
+          <label>จำนวนเงิน (บาท)</label>
+          <input id="as-amount" type="number" min="0" step="0.01" required />
+        </div>
+        <div class="field" style="flex:0;">
+          <button class="btn btn--primary" type="submit">บันทึก</button>
+        </div>
+      </form>
+      <div class="table-scroll">
+        <table class="data" id="adspend-table">
+          <thead><tr><th>วันที่</th><th>มุม</th><th>จำนวนเงิน</th></tr></thead>
+          <tbody id="adspend-tbody"></tbody>
+        </table>
+        <div id="adspend-empty" class="empty-state" hidden>ยังไม่มีข้อมูลค่าแอด</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import {
+    db, requireAuth, wireLogoutButton, explainFirestoreError,
+    collection, doc, addDoc, setDoc, updateDoc, getDocs, query, orderBy, serverTimestamp,
+  } from "./js/app.js";
+
+  const CPA_CEILING = 385; // อ้างอิง analysis/unit-economics.md — แก้ตรงนี้ถ้าราคา/ต้นทุนเปลี่ยน
+
+  const fmtBaht = (n) => "฿" + Number(n || 0).toLocaleString("th-TH", { maximumFractionDigits: 0 });
+
+  let offersCache = [];
+
+  async function loadProducts() {
+    const snap = await getDocs(collection(db, "products"));
+    if (snap.empty) {
+      document.getElementById("setup-box").hidden = false;
+    }
+  }
+
+  document.getElementById("seed-btn").addEventListener("click", async () => {
+    const productRef = doc(collection(db, "products"));
+    await setDoc(productRef, {
+      name: "MAXIMUS",
+      brand: "เพชรพญา",
+      status: "active",
+      createdAt: serverTimestamp(),
+    });
+    const offers = [
+      { name: "ชุดเริ่มต้น", price: 890, costPrice: 120 },
+      { name: "ชุดคู่", price: 1690, costPrice: 240 },
+      { name: "แกลลอนเติม", price: 550, costPrice: 60 },
+    ];
+    for (const o of offers) {
+      await addDoc(collection(db, "offers"), {
+        productId: productRef.id,
+        ...o,
+        active: true,
+        createdAt: serverTimestamp(),
+      });
+    }
+    document.getElementById("setup-box").hidden = true;
+    await loadOffers();
+  });
+
+  async function loadOffers() {
+    const snap = await getDocs(collection(db, "offers"));
+    offersCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const select = document.getElementById("f-offer");
+    select.innerHTML = offersCache
+      .map((o) => `<option value="${o.id}">${o.name} — ${fmtBaht(o.price)}</option>`)
+      .join("");
+  }
+
+  function monthKey(date) {
+    const d = date instanceof Date ? date : (date?.toDate ? date.toDate() : new Date(date));
+    return `${d.getFullYear()}-${d.getMonth()}`;
+  }
+
+  async function loadOrders() {
+    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    const orders = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const tbody = document.getElementById("orders-tbody");
+    document.getElementById("orders-empty").hidden = orders.length > 0;
+    tbody.innerHTML = orders
+      .map((o) => {
+        const date = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString("th-TH") : "-";
+        const pillClass = o.status === "shipped" || o.status === "completed" ? "pill--ok"
+          : o.status === "refund_requested" ? "pill--danger" : "pill--warn";
+        return `<tr>
+          <td>${date}</td>
+          <td>${o.customerName || "-"}</td>
+          <td>${o.offerName || "-"}</td>
+          <td>${o.qty || 1}</td>
+          <td>${fmtBaht(o.totalAmount)}</td>
+          <td>${o.angle || "-"}</td>
+          <td><select data-id="${o.id}" class="status-select">
+            ${["pending_payment","paid","packing","shipped","completed","refund_requested","refunded","cancelled"]
+              .map((s) => `<option value="${s}" ${o.status === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select></td>
+        </tr>`;
+      })
+      .join("");
+
+    document.querySelectorAll(".status-select").forEach((sel) => {
+      sel.addEventListener("change", async (e) => {
+        await updateDoc(doc(db, "orders", e.target.dataset.id), { status: e.target.value });
+      });
+    });
+
+    // stats
+    const now = new Date();
+    const thisMonthOrders = orders.filter(
+      (o) => o.createdAt && monthKey(o.createdAt) === monthKey(now) && o.status !== "cancelled"
+    );
+    const revenue = thisMonthOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+    document.getElementById("stat-orders").textContent = thisMonthOrders.length;
+    document.getElementById("stat-revenue").textContent = fmtBaht(revenue);
+    return thisMonthOrders.length;
+  }
+
+  async function loadAdSpend() {
+    const q = query(collection(db, "adSpend"), orderBy("date", "desc"));
+    const snap = await getDocs(q);
+    const entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const tbody = document.getElementById("adspend-tbody");
+    document.getElementById("adspend-empty").hidden = entries.length > 0;
+    tbody.innerHTML = entries
+      .map((e) => `<tr><td>${e.date}</td><td>${e.angle || "-"}</td><td>${fmtBaht(e.amount)}</td></tr>`)
+      .join("");
+
+    const now = new Date();
+    const thisMonth = entries.filter((e) => monthKey(new Date(e.date)) === monthKey(now));
+    const totalSpend = thisMonth.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    document.getElementById("stat-adspend").textContent = fmtBaht(totalSpend);
+    return totalSpend;
+  }
+
+  function renderCpa(totalSpend, orderCount) {
+    const cpaEl = document.getElementById("stat-cpa");
+    const noteEl = document.getElementById("stat-cpa-note");
+    if (!orderCount) {
+      cpaEl.textContent = "—";
+      noteEl.textContent = `ยังไม่มีออเดอร์เดือนนี้ (เพดาน ${fmtBaht(CPA_CEILING)}/ออเดอร์)`;
+      return;
+    }
+    const cpa = totalSpend / orderCount;
+    cpaEl.textContent = fmtBaht(cpa);
+    if (cpa <= CPA_CEILING) {
+      noteEl.innerHTML = `<span class="pill pill--ok">ต่ำกว่าเพดาน ${fmtBaht(CPA_CEILING)} ✓</span>`;
+    } else {
+      noteEl.innerHTML = `<span class="pill pill--danger">เกินเพดาน ${fmtBaht(CPA_CEILING)}</span>`;
+    }
+  }
+
+  async function refreshAll() {
+    const orderCount = await loadOrders();
+    const totalSpend = await loadAdSpend();
+    renderCpa(totalSpend, orderCount);
+  }
+
+  document.getElementById("order-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const offerId = document.getElementById("f-offer").value;
+    const offer = offersCache.find((o) => o.id === offerId);
+    const qty = Number(document.getElementById("f-qty").value || 1);
+    try {
+      await addDoc(collection(db, "orders"), {
+        customerName: document.getElementById("f-name").value,
+        phone: document.getElementById("f-phone").value,
+        address: document.getElementById("f-address").value,
+        offerId,
+        offerName: offer?.name || "",
+        qty,
+        totalAmount: (offer?.price || 0) * qty,
+        angle: document.getElementById("f-angle").value,
+        status: "pending_payment",
+        createdAt: serverTimestamp(),
+      });
+      e.target.reset();
+      document.getElementById("f-qty").value = 1;
+      await refreshAll();
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+
+  document.getElementById("adspend-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await addDoc(collection(db, "adSpend"), {
+        date: document.getElementById("as-date").value,
+        angle: document.getElementById("as-angle").value,
+        amount: Number(document.getElementById("as-amount").value),
+        createdAt: serverTimestamp(),
+      });
+      e.target.reset();
+      await refreshAll();
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+
+  document.getElementById("as-date").valueAsDate = new Date();
+
+  wireLogoutButton();
+  requireAuth(async () => {
+    try {
+      await loadProducts();
+      await loadOffers();
+      await refreshAll();
+    } catch (err) {
+      explainFirestoreError(err, "error");
+    }
+  });
+</script>
+</body>
+</html>
