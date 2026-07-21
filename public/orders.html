@@ -109,7 +109,8 @@
     <!-- AD SPEND LOG -->
     <div class="card">
       <h3>บันทึกค่าแอดรายวัน</h3>
-      <p class="stat-sub">ใช้คำนวณ CPA จริง — บันทึกทุกวันที่ยิงแอดเพื่อให้ตัวเลขแม่นยำ</p>
+      <p class="stat-sub">ใช้คำนวณ CPA จริง — บันทึกทุกวันที่ยิงแอดเพื่อให้ตัวเลขแม่นยำ (พิมพ์เอง หรือกดซิงก์จาก Facebook อัตโนมัติ)</p>
+      <button class="btn btn--ghost" id="sync-fb-btn" style="margin-bottom:16px;">🔄 ซิงก์ค่าแอดจาก Facebook (7 วันล่าสุด)</button>
       <form id="adspend-form" class="field-row" style="align-items:flex-end;">
         <div class="field">
           <label>วันที่</label>
@@ -140,9 +141,13 @@
 
 <script type="module">
   import {
-    db, requireAuth, wireLogoutButton, explainFirestoreError,
+    db, auth, requireAuth, wireLogoutButton, explainFirestoreError,
     collection, doc, addDoc, setDoc, updateDoc, getDocs, query, orderBy, serverTimestamp,
   } from "./js/app.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
+
+  const functions = getFunctions(auth.app, "asia-southeast1");
+  const syncAdSpendFn = httpsCallable(functions, "syncAdSpend");
 
   const CPA_CEILING = 385; // อ้างอิง analysis/unit-economics.md — แก้ตรงนี้ถ้าราคา/ต้นทุนเปลี่ยน
 
@@ -246,7 +251,7 @@
     const tbody = document.getElementById("adspend-tbody");
     document.getElementById("adspend-empty").hidden = entries.length > 0;
     tbody.innerHTML = entries
-      .map((e) => `<tr><td>${e.date}</td><td>${e.angle || "-"}</td><td>${fmtBaht(e.amount)}</td></tr>`)
+      .map((e) => `<tr><td>${e.date}</td><td>${e.angle || (e.source === "facebook_auto_sync" ? '<span class="pill pill--ok">auto-sync</span>' : "-")}</td><td>${fmtBaht(e.amount)}</td></tr>`)
       .join("");
 
     const now = new Date();
@@ -322,6 +327,22 @@
   });
 
   document.getElementById("as-date").valueAsDate = new Date();
+
+  document.getElementById("sync-fb-btn").addEventListener("click", async (e) => {
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = "กำลังซิงก์...";
+    try {
+      const result = await syncAdSpendFn({ daysBack: 7 });
+      await refreshAll();
+      btn.textContent = `✓ ซิงก์แล้ว ${result.data.daysSynced} วัน`;
+      setTimeout(() => { btn.textContent = "🔄 ซิงก์ค่าแอดจาก Facebook (7 วันล่าสุด)"; btn.disabled = false; }, 3000);
+    } catch (err) {
+      explainFirestoreError(err, "error");
+      btn.textContent = "🔄 ซิงก์ค่าแอดจาก Facebook (7 วันล่าสุด)";
+      btn.disabled = false;
+    }
+  });
 
   wireLogoutButton();
   requireAuth(async () => {

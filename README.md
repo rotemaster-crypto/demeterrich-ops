@@ -50,7 +50,11 @@ Facebook Messenger → Cloudflare Worker (รับข้อความ, สา
 - [ ] ในหน้า Messenger Settings → Access Tokens → เลือกเพจ MAXIMUS → Generate Token → คัดลอก **Page Access Token**
 - [ ] ตั้งค่า Webhook: Callback URL = `https://maximus-messenger-webhook.demeterrich.workers.dev/` (ของจริงที่ deploy ไว้แล้ว), Verify Token = ค่าเดียวกับที่ตั้งไว้ในระบบ (ขอจาก Claude ถ้าจำไม่ได้ — เก็บเป็น Cloudflare secret ไม่โชว์ในโค้ด)
 - [ ] เลือก Subscribe to: `messages`
-- [ ] เอา Page Access Token ที่ได้ ไปอัปเดตใน Firebase Functions secret: `firebase functions:secrets:set FB_PAGE_ACCESS_TOKEN` (แล้ว redeploy `sendReply`)
+- [ ] เอา Page Access Token ที่ได้ ไปอัปเดตใน Firebase Functions secret: `firebase functions:secrets:set FB_PAGE_ACCESS_TOKEN` (ใช้ทั้งส่งข้อความและโพสต์คอนเทนต์)
+- [ ] อัปเดต Page ID: `firebase functions:secrets:set FB_PAGE_ID`
+- [ ] (ถ้าจะใช้ดึงค่าแอดอัตโนมัติ) ไปที่ Business Manager → Ad Account → คัดลอก Ad Account ID (รูปแบบ `act_1234567890`) → `firebase functions:secrets:set FB_AD_ACCOUNT_ID`
+- [ ] สร้าง token ที่มีสิทธิ์ `ads_read` (จาก Graph API Explorer หรือ System User ใน Business Manager) → `firebase functions:secrets:set FB_MARKETING_ACCESS_TOKEN`
+- [ ] `firebase deploy --only functions` อีกครั้งหลังตั้งค่า secret ใหม่ทุกครั้ง
 
 พอครบทุกข้อ ทดสอบได้จริงโดยส่งข้อความไปที่เพจ MAXIMUS แล้วเช็กที่ `inbox.html`
 

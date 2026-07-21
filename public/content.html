@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ปฏิทินคอนเทนต์ — DemeterRich Ops</title>
 <link rel="stylesheet" href="css/shared.css" />
+<style>
+  .day-card { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 10px; background: var(--surface); }
+  .day-card.posted { border-left: 3px solid var(--ok); }
+  .day-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .day-num { font-family: var(--sans); font-weight: 700; font-size: 13px; color: var(--ink-faint); }
+  .day-topic { font-weight: 700; font-size: 14.5px; flex: 1; min-width: 180px; }
+  .day-body { display: none; margin-top: 12px; }
+  .day-card.open .day-body { display: block; }
+  .day-toggle { cursor: pointer; }
+  .caption-box { width: 100%; min-height: 70px; margin-bottom: 10px; }
+  .day-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .day-note { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
+</style>
 </head>
 <body>
 <div class="shell">
@@ -25,7 +38,7 @@
   <main class="main">
     <div class="page-head">
       <h1>ปฏิทินคอนเทนต์ 30 วัน</h1>
-      <p>ติ๊กเมื่อโพสต์แล้ว — ต้องครบ 12 โพสต์แรกก่อนเริ่มยิงแอด (ตามกติกา marketing/page-setup.md)</p>
+      <p>คลิกแต่ละวันเพื่อเขียนแคปชั่นและโพสต์ไปเพจได้เลย หรือติ๊กเองถ้าไปโพสต์เองแล้ว — ต้องครบ 12 โพสต์แรกก่อนเริ่มยิงแอด</p>
     </div>
 
     <div id="error" class="error-box" hidden></div>
@@ -36,33 +49,31 @@
       <div class="stat-sub" id="gate-status"></div>
     </div>
 
-    <div class="card">
-      <div class="table-scroll">
-        <table class="data">
-          <thead><tr><th style="width:50px;">Day</th><th style="width:60px;">เสา</th><th>หัวข้อ</th><th style="width:90px;">บังคับ</th><th style="width:80px;">สถานะ</th></tr></thead>
-          <tbody id="cal-tbody"></tbody>
-        </table>
-      </div>
-    </div>
+    <div id="cal-list"></div>
   </main>
 </div>
 
 <script type="module">
-  import { db, requireAuth, wireLogoutButton, explainFirestoreError, doc, setDoc, getDocs, collection } from "./js/app.js";
+  import { db, auth, requireAuth, wireLogoutButton, explainFirestoreError, doc, setDoc, getDoc, getDocs, collection } from "./js/app.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
   import { maximusCalendar } from "./data/content-calendar-maximus.js";
 
   const PRODUCT_KEY = "maximus"; // ตอนมีสินค้าใหม่: เปลี่ยนเป็น dropdown เลือกสินค้า + ใช้ seed data ของสินค้านั้น
+  const functions = getFunctions(auth.app, "asia-southeast1");
+  const postToFacebookFn = httpsCallable(functions, "postToFacebook");
+
+  let statusMap = {};
 
   async function loadStatuses() {
     const snap = await getDocs(collection(db, "contentCalendar"));
-    const statusMap = {};
-    snap.docs.forEach((d) => { statusMap[d.id] = d.data().posted; });
-    return statusMap;
+    const map = {};
+    snap.docs.forEach((d) => { map[d.id] = d.data(); });
+    return map;
   }
 
-  function renderGate(statusMap) {
+  function renderGate() {
     const requiredDays = maximusCalendar.filter((c) => c.required);
-    const doneCount = requiredDays.filter((c) => statusMap[`${PRODUCT_KEY}_${c.day}`]).length;
+    const doneCount = requiredDays.filter((c) => statusMap[`${PRODUCT_KEY}_${c.day}`]?.posted).length;
     document.getElementById("gate-progress").textContent = `${doneCount} / ${requiredDays.length}`;
     const el = document.getElementById("gate-status");
     if (doneCount >= requiredDays.length) {
@@ -72,38 +83,85 @@
     }
   }
 
-  async function render() {
-    const statusMap = await loadStatuses();
-    renderGate(statusMap);
-    const tbody = document.getElementById("cal-tbody");
-    tbody.innerHTML = maximusCalendar
+  function render() {
+    renderGate();
+    const list = document.getElementById("cal-list");
+    list.innerHTML = maximusCalendar
       .map((c) => {
         const key = `${PRODUCT_KEY}_${c.day}`;
-        const posted = !!statusMap[key];
-        return `<tr>
-          <td>${c.day}</td>
-          <td>${c.pillar}</td>
-          <td>${c.topic}</td>
-          <td>${c.required ? '<span class="pill pill--warn">บังคับ</span>' : '<span class="pill pill--neutral">เสริม</span>'}</td>
-          <td><label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-            <input type="checkbox" class="post-check" data-key="${key}" ${posted ? "checked" : ""} style="width:auto;" />
-            ${posted ? "โพสต์แล้ว" : "ยังไม่โพสต์"}
-          </label></td>
-        </tr>`;
+        const data = statusMap[key] || {};
+        const posted = !!data.posted;
+        return `<div class="day-card ${posted ? "posted" : ""}" data-key="${key}">
+          <div class="day-head day-toggle">
+            <span class="day-num">Day ${c.day} · ${c.pillar}</span>
+            <span class="day-topic">${c.topic}</span>
+            ${c.required ? '<span class="pill pill--warn">บังคับ</span>' : '<span class="pill pill--neutral">เสริม</span>'}
+            <span class="pill ${posted ? "pill--ok" : "pill--neutral"}">${posted ? "โพสต์แล้ว" : "ยังไม่โพสต์"}</span>
+          </div>
+          <div class="day-body">
+            <label>แคปชั่นสำหรับโพสต์นี้</label>
+            <textarea class="caption-box" data-key="${key}" placeholder="เขียนแคปชั่นเต็มที่จะโพสต์...">${data.caption || ""}</textarea>
+            <div class="day-actions">
+              <button class="btn btn--primary post-btn" data-key="${key}">📤 โพสต์ไปเพจตอนนี้</button>
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+                <input type="checkbox" class="manual-check" data-key="${key}" ${posted ? "checked" : ""} style="width:auto;" />
+                <span style="font-size:13px;">ติ๊กเอง (ไปโพสต์เองแล้ว)</span>
+              </label>
+            </div>
+            <div class="day-note">ปุ่ม "โพสต์ไปเพจตอนนี้" ใช้งานได้หลังตั้งค่า Facebook Page + Meta App เสร็จ (ดู README) — ก่อนหน้านั้นให้ติ๊กเองแทน</div>
+          </div>
+        </div>`;
       })
       .join("");
 
-    document.querySelectorAll(".post-check").forEach((cb) => {
+    list.querySelectorAll(".day-toggle").forEach((el) => {
+      el.addEventListener("click", () => el.closest(".day-card").classList.toggle("open"));
+    });
+
+    list.querySelectorAll(".caption-box").forEach((el) => {
+      el.addEventListener("click", (e) => e.stopPropagation());
+      el.addEventListener("blur", async () => {
+        await setDoc(doc(db, "contentCalendar", el.dataset.key), { caption: el.value, product: PRODUCT_KEY }, { merge: true });
+      });
+    });
+
+    list.querySelectorAll(".manual-check").forEach((cb) => {
+      cb.addEventListener("click", (e) => e.stopPropagation());
       cb.addEventListener("change", async (e) => {
         try {
-          await setDoc(doc(db, "contentCalendar", e.target.dataset.key), {
-            posted: e.target.checked,
-            product: PRODUCT_KEY,
-            updatedAt: new Date().toISOString(),
-          });
-          await render();
+          await setDoc(
+            doc(db, "contentCalendar", e.target.dataset.key),
+            { posted: e.target.checked, product: PRODUCT_KEY, updatedAt: new Date().toISOString() },
+            { merge: true }
+          );
+          statusMap = await loadStatuses();
+          render();
         } catch (err) {
           explainFirestoreError(err, "error");
+        }
+      });
+    });
+
+    list.querySelectorAll(".post-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.key;
+        const caption = list.querySelector(`.caption-box[data-key="${key}"]`).value.trim();
+        if (!caption) {
+          alert("ใส่แคปชั่นก่อนโพสต์");
+          return;
+        }
+        if (!confirm("ยืนยันโพสต์ข้อความนี้ขึ้นเพจ Facebook จริงตอนนี้เลยหรือไม่?")) return;
+        btn.disabled = true;
+        btn.textContent = "กำลังโพสต์...";
+        try {
+          await postToFacebookFn({ message: caption, calendarKey: key });
+          statusMap = await loadStatuses();
+          render();
+        } catch (err) {
+          explainFirestoreError(err, "error");
+          btn.disabled = false;
+          btn.textContent = "📤 โพสต์ไปเพจตอนนี้";
         }
       });
     });
@@ -112,7 +170,8 @@
   wireLogoutButton();
   requireAuth(async () => {
     try {
-      await render();
+      statusMap = await loadStatuses();
+      render();
     } catch (err) {
       explainFirestoreError(err, "error");
     }
