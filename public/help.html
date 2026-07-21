@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>คู่มือใช้งาน — DemeterRich Ops</title>
+<link rel="stylesheet" href="css/shared.css" />
+<style>
+  .tool-card { margin-bottom: 20px; }
+  .tool-card h2 { font-size: 18px; margin-bottom: 2px; }
+  .tool-card .when { font-size: 13px; color: var(--ink-soft); margin-bottom: 14px; }
+  .can-cant { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .can-cant { grid-template-columns: 1fr; } }
+  .can-cant .col h4 { font-size: 12px; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .can-cant .col.can h4 { color: var(--ok); }
+  .can-cant .col.cant h4 { color: var(--danger); }
+  .can-cant ul { display: flex; flex-direction: column; gap: 7px; }
+  .can-cant li { font-size: 13.5px; color: var(--ink-soft); padding-left: 18px; position: relative; }
+  .can-cant .col.can li::before { content: "✓"; position: absolute; left: 0; color: var(--ok); font-weight: 700; }
+  .can-cant .col.cant li::before { content: "✕"; position: absolute; left: 0; color: var(--danger); font-weight: 700; }
+  .can-cant li.strong { font-weight: 700; color: var(--ink); }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .toc a { font-size: 12.5px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--ink-soft); }
+  .toc a:hover { border-color: var(--accent); color: var(--ink); }
+  .never-table td:first-child { font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand">DemeterRich Ops<small>Internal</small></div>
+    <a href="orders.html">📦 ออเดอร์ & CPA</a>
+    <a href="inbox.html">📨 กล่องข้อความ</a>
+    <a href="content.html">🗓 ปฏิทินคอนเทนต์</a>
+    <a href="chat-reference.html">💬 คลังสคริปต์แชท</a>
+    <a href="compliance-check.html">🛡 เช็กคำต้องห้าม</a>
+    <a href="salepage-settings.html">🎨 ตกแต่ง Sale Page</a>
+    <a href="help.html" class="active">📖 คู่มือใช้งาน</a>
+    <div class="spacer"></div>
+    <div class="user" id="current-user-email">—</div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </nav>
+
+  <main class="main">
+    <div class="page-head">
+      <h1>คู่มือใช้งานระบบ</h1>
+      <p>แต่ละเครื่องมือทำอะไรได้บ้าง — และที่สำคัญกว่านั้น ทำอะไร<strong>ไม่ได้</strong>บ้าง</p>
+    </div>
+
+    <div class="toc">
+      <a href="#orders">📦 ออเดอร์ & CPA</a>
+      <a href="#inbox">📨 กล่องข้อความ</a>
+      <a href="#content">🗓 ปฏิทินคอนเทนต์</a>
+      <a href="#chatref">💬 คลังสคริปต์แชท</a>
+      <a href="#compliance">🛡 เช็กคำต้องห้าม</a>
+      <a href="#settings">🎨 ตกแต่ง Sale Page</a>
+      <a href="#salepage">🛍 หน้าขายจริง</a>
+      <a href="#never">🚫 สิ่งที่ระบบไม่ทำเลย</a>
+      <a href="#fallback">🆘 ถ้าระบบล่ม</a>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="card tool-card" id="orders">
+      <h2>📦 ออเดอร์ & CPA Tracker</h2>
+      <div class="when">ใช้ตอนไหน: ทุกครั้งที่มีลูกค้าสั่งซื้อจริง และทุกวันที่ยิงแอด</div>
+      <div class="can-cant">
+        <div class="col can">
+          <h4>✅ ทำได้</h4>
+          <ul>
+            <li>บันทึกออเดอร์ (ชื่อ/แพ็กเกจ/ราคา/ที่อยู่/ช่องทางที่มา)</li>
+            <li>บันทึกค่าแอดรายวัน</li>
+            <li>คำนวณ CPA อัตโนมัติเทียบเพดาน 385 บาท</li>
+            <li>ดูยอดขาย/จำนวนออเดอร์เดือนนี้แบบเรียลไทม์</li>
+          </ul>
+        </div>
+        <div class="col cant">
+          <h4>🚫 ทำไม่ได้</h4>
+          <ul>
+            <li class="strong">ไม่เชื่อมระบบรับเงินจริง — กรอกเองหลังลูกค้าโอนแล้วเท่านั้น</li>
+            <li>ไม่ดึงค่าแอดจาก Ads Manager อัตโนมัติ ต้องพิมพ์เอง</li>
+            <li>ไม่แจ้งเตือนเมื่อ CPA เกินเพดาน ต้องเข้ามาดูเอง</li>
+            <li>รองรับสกุลเงินบาทเท่านั้น</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- INBOX -->
+    <div class="card tool-card" id="inbox">
+      <h2>📨 กล่องข้อความ</h2>
+      <div class="when">ใช้ตอนไหน: ตอบแชทลูกค้าที่ทักเข้ามาทาง Facebook Messenger</div>
+      <div class="can-cant">
+        <div class="col can">
+          <h4>✅ ทำได้</h4>
+          <ul>
+            <li>รับข้อความลูกค้าเข้ามาแบบเรียลไทม์ (เมื่อตั้งค่า Facebook เสร็จ)</li>
+            <li>แนะนำสคริปต์คำตอบที่ใกล้เคียงที่สุดให้อัตโนมัติ</li>
+            <li>เตือนชัดเจนถ้าคำถามต้องส่งต่อ Roger (ทะเบียน/สัตว์เลี้ยง ฯลฯ)</li>
+          </ul>
+        </div>
+        <div class="col cant">
+          <h4>🚫 ทำไม่ได้ (สำคัญที่สุด)</h4>
+          <ul>
+            <li class="strong">ไม่ตอบลูกค้าอัตโนมัติเด็ดขาดในทุกกรณี — ต้องกด "ส่ง" เองเสมอ</li>
+            <li class="strong">ยังใช้จริงไม่ได้จนกว่าจะมีเพจ FB + Meta App + Page Access Token</li>
+            <li>รับได้แค่ข้อความตัวหนังสือ — รูป/สติกเกอร์ไม่ถูกบันทึก</li>
+            <li>ไม่มีระบบมอบหมายงานว่าใครตอบคนไหน</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="card tool-card" id="content">
+      <h2>🗓 ปฏิทินคอนเทนต์</h2>
+      <div class="when">ใช้ตอนไหน: ติดตามว่าโพสต์ครบตามแผน 30 วันหรือยัง</div>
+      <div class="can-cant">
+        <div class="col can">
+          <h4>✅ ทำได้</h4>
+          <ul>
+            <li>ติ๊กสถานะว่าโพสต์แต่ละวันแล้วหรือยัง</li>
+            <li>เช็กอัตโนมัติว่าครบ 12 โพสต์บังคับก่อนยิงแอดหรือยัง</li>
+          </ul>
+        </div>
+        <div class="col cant">
+          <h4>🚫 ทำไม่ได้</h4>
+          <ul>
+            <li class="strong">ไม่โพสต์ขึ้นเพจ Facebook ให้ — ต้องไปโพสต์เอง</li>
+            <li class="strong">ไม่สร้างรูปให้ — ใช้ prompt จาก image-prompts.md ไปสร้างเองผ่าน Nano Banana/Canva</li>
+            <li>มีแค่คอนเทนต์ของ MAXIMUS เท่านั้นตอนนี้</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT REFERENCE -->
+    <div class="card tool-card" id="chatref">
+      <h2>💬 คลังสคริปต์แชท</h2>
+      <div class="when">ใช้ตอนไหน: ค้นหาคำตอบสำเร็จรูป</div>
+      <div class="can-cant">
+        <div class="col can">
+          <h4>✅ ทำได้</h4>
+          <ul>
+            <li>ค้นหาด้วยคำสำคัญ เจอสคริปต์ทันที</li>
+            <li>กดคัดลอกไปวางที่อื่นได้เลย</li>
+          </ul>
+        </div>
+        <div class="col cant">
+          <h4>🚫 ทำไม่ได้</h4>
+          <ul>
+            <li>ไม่ auto-fill เข้า Messenger โดยตรง ต้อง copy-paste เอง</li>
+            <li>เจอคำถามที่ไม่มีในคลัง ไม่แต่งคำตอบให้ — ต้องคิดเองหรือส่งต่อ Roger</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLIANCE -->
+    <div class="card tool-card" id="compliance">
+      <h2>🛡 เช็กคำต้องห้าม</h2>
+      <div class="when">ใช้ตอนไหน: ก่อนโพสต์ ad copy หรือคอนเทนต์ที่เคลมสรรพคุณ</div>
+      <div class="can-cant">
+        <div class="col can">
+          <h4>✅ ทำได้</h4>
+          <ul>
+            <li>สแกนข้อความหาคำต้องห้ามแบบเรียลไทม์ขณะพิมพ์</li>
+          </ul>
+        </div>
+        <div class="col cant">
+          <h4>🚫 ทำไม่ได้</h4>
+          <ul>
+            <li class="strong">ไม่ใช่การตรวจสอบทางกฎหมายที่สมบูรณ์ — เช็กแค่คำที่ตรงรูปแบบเท่านั้น</li>
+            <li class="strong">ไม่ทดแทนการตรวจจริงก่อนเผยแพร่ — เนื้อหาสำคัญให้ Roger ทวนอีกรอบเสมอ</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALEPAGE SETTINGS -->
+    <div class="card tool-card" id="settings">
+      <h2>🎨 ตกแต่ง Sale Page</h2>
+      <div class="when">ใช้ตอนไหน: ปรับหน้าตาเว็บขายตามเทศกาล/แคมเปญ</div>
+      <div class="can-cant">
+        <div class="col can">
+          <h4>✅ ทำได้</h4>
+          <ul>
+            <li>เปลี่ยนสี 3 จุด, ฟอนต์, รูป header, ข้อความ hero</li>
+            <li>มีผลทันทีที่หน้าเว็บจริง ไม่ต้อง deploy ใหม่</li>
+          </ul>
+        </div>
+        <div class="col cant">
+          <h4>🚫 ทำไม่ได้</h4>
+          <ul>
+            <li class="strong">แก้ได้แค่ส่วน Hero เท่านั้น — ตารางราคา/FAQ/นโยบาย แก้ผ่านนี้ไม่ได้</li>
+            <li>ไม่มีปุ่มย้อนกลับอัตโนมัติ — รีเซ็ตได้แต่กลับไปค่าเริ่มต้นในโค้ด ไม่ใช่ค่าก่อนหน้า</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALE PAGE ITSELF -->
+    <div class="card tool-card" id="salepage">
+      <h2>🛍 หน้าขายจริง (maximus-salepage.web.app)</h2>
+      <div class="when">นี่คือหน้าที่ลูกค้าเห็นจริง — ไม่ต้อง login ทุกคนเข้าได้</div>
+      <div class="can-cant">
+        <div class="col can">
+          <h4>✅ ทำได้</h4>
+          <ul>
+            <li>แสดงสินค้า ราคา วิธีใช้ นโยบายคืนสินค้า</li>
+            <li>ปุ่ม CTA พาไปแชท Messenger สั่งซื้อ</li>
+          </ul>
+        </div>
+        <div class="col cant">
+          <h4>🚫 ทำไม่ได้ (ตั้งใจ)</h4>
+          <ul>
+            <li class="strong">ไม่มี checkout/ใส่บัตรเครดิตในหน้านี้ — สั่งซื้อ/ชำระเงินที่แชทเท่านั้น</li>
+            <li>ไม่เก็บข้อมูลลูกค้า ไม่มีฟอร์มกรอกอะไร</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEVER TABLE -->
+    <div class="card" id="never" style="margin-bottom:20px;">
+      <h2 style="font-size:18px;">🚫 สิ่งที่ทั้งระบบไม่ทำเลย โดยตั้งใจ</h2>
+      <p class="stat-sub" style="margin-bottom:14px;">ไม่ใช่ข้อจำกัดทางเทคนิค แต่เป็นการตัดสินใจ</p>
+      <div class="table-scroll">
+        <table class="data never-table">
+          <thead><tr><th style="width:38%;">สิ่งที่ไม่ทำ</th><th>เหตุผล</th></tr></thead>
+          <tbody>
+            <tr><td>ส่งข้อความหาลูกค้าอัตโนมัติ</td><td>ป้องกันคำตอบผิด/เคลมเกินจริงหลุดไปโดยไม่มีคนเห็นก่อน</td></tr>
+            <tr><td>ประมวลผลการชำระเงิน/บัตรเครดิต</td><td>ให้มีจุดตรวจสอบจากคนเสมอก่อนยืนยันออเดอร์</td></tr>
+            <tr><td>ยิง/ปรับงบโฆษณาอัตโนมัติ</td><td>ต้องอิงดุลยพินิจของทีม ไม่ใช่สูตรตายตัว</td></tr>
+            <tr><td>โพสต์คอนเทนต์ขึ้น Facebook อัตโนมัติ</td><td>ต้องมีคนเห็นก่อนเผยแพร่เสมอ</td></tr>
+            <tr><td>ตั้งราคา/นโยบายเอง</td><td>เป็นการตัดสินใจธุรกิจ ระบบแค่ช่วยคำนวณ/แนะนำ</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FALLBACK -->
+    <div class="card" id="fallback">
+      <h2 style="font-size:18px;">🆘 ถ้าระบบล่มหรือเข้าไม่ได้</h2>
+      <ul style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+        <li>📦 <strong>ออเดอร์:</strong> จดใส่ Google Sheet ชั่วคราว แล้วค่อยกรอกเข้าระบบทีหลัง</li>
+        <li>💬 <strong>ตอบแชท:</strong> เปิดไฟล์ sales/chat-playbook.md และ objection-bank.md ตรงๆ</li>
+        <li>🛡 <strong>เช็กคำต้องห้าม:</strong> เทียบกับตารางใน compliance/approved-claims.md ด้วยตาเปล่า</li>
+        <li>🗓 <strong>ปฏิทินคอนเทนต์:</strong> เปิด marketing/content-calendar.md ตรงๆ</li>
+      </ul>
+      <p class="stat-sub" style="margin-top:14px;">ระบบนี้คือตัวช่วยให้เร็วขึ้น ไม่ใช่จุดเดียวที่พังแล้วธุรกิจหยุด — ทุกอย่างทำด้วยมือได้เสมอ</p>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { requireAuth, wireLogoutButton } from "./js/app.js";
+  wireLogoutButton();
+  requireAuth(() => {});
+</script>
+</body>
+</html>
