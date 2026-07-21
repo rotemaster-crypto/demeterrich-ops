@@ -6,6 +6,19 @@
 
 ---
 
+## Sites ที่ deploy อยู่ตอนนี้ (multi-site hosting)
+
+| Site | URL | เข้าถึงได้โดยใคร |
+|---|---|---|
+| `ops` (target: `demeterrich-ops`) | https://demeterrich-ops.web.app | ทีมเท่านั้น (login) — เครื่องมือใน README นี้ทั้งหมด |
+| `salepage` (target: `maximus-salepage`) | https://maximus-salepage.web.app | สาธารณะ — หน้าขาย MAXIMUS ไม่มี login |
+
+Sale page อยู่ในโฟลเดอร์ `salepage-public/` แยกจาก `public/` (ops tool) โดยเจตนา เพราะเป็นคนละกลุ่มผู้ใช้ (ลูกค้า vs ทีม) — deploy แยกกันได้ด้วย `firebase deploy --only hosting:salepage` หรือ `--only hosting:ops`
+
+**อัปเดต sale page:** แก้ไฟล์ต้นทางที่ `project maximus/salepage/index.html` ก่อน แล้วค่อย copy มาที่ `salepage-public/index.html` ในนี้ (ยังไม่ได้เชื่อมอัตโนมัติ — สองที่นี้อาจไม่ตรงกันถ้าลืม sync)
+
+---
+
 ## สิ่งที่มีให้ตอนนี้
 
 | หน้า | ทำอะไร |

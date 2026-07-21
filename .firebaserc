@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "demeterrich-ops"
-  }
+  },
+  "targets": {
+    "demeterrich-ops": {
+      "hosting": {
+        "salepage": [
+          "maximus-salepage"
+        ],
+        "ops": [
+          "demeterrich-ops"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
